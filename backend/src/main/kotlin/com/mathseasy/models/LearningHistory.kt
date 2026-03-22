@@ -7,6 +7,7 @@ data class LearningHistory(
     val id: String? = null,
     val userId: String = "",
     val exerciseId: String = "",
+    val setId: String = "",
     val userAnswer: String = "",
     val isCorrect: Boolean = false,
     val timeSpent: Int = 0, // in seconds
