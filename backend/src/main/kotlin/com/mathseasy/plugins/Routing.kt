@@ -34,6 +34,7 @@ fun Application.configureRouting() {
             aiRoutes()
             notificationRoutes()
             paymentRoutes()
+            studyPlanRoutes()
         }
     }
 }
