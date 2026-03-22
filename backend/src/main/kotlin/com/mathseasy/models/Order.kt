@@ -44,7 +44,6 @@ data class OrderStatusResponse(
 
 /**
  * SePay webhook payload
- * Based on SePay API documentation
  */
 @Serializable
 data class SepayWebhookPayload(
