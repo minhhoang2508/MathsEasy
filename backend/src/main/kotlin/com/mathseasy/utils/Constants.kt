@@ -108,9 +108,8 @@ object Constants {
     
     const val SEPAY_BANK = "MB"
     const val SEPAY_ACCOUNT = "0378313750"
-    const val SEPAY_API_KEY = "LSBL0PTUA27T1WZXSGWQUGOUUZHNSMRT8VQBJMZNHDYYCVXODPEX2IRV4RZK3WO5"
+    val SEPAY_API_KEY: String = System.getenv("SEPAY_API_KEY") ?: ""
     
     const val PAYMENT_AMOUNT_FOUNDATIONS = 50000L
 }
-
 
