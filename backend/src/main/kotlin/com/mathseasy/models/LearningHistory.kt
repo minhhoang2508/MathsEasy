@@ -55,4 +55,7 @@ data class DailyProgressResponse(
     val dailyProgress: List<DailyProgress>
 )
 
-
+@Serializable
+data class CompletedSetIdsResponse(
+    val setIds: List<String>
+)
