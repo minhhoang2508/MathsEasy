@@ -18,7 +18,6 @@ class ScheduleService(
         val createdSchedules = mutableListOf<LearningSchedule>()
         
         for (input in scheduleInputs) {
-            // Validate input
             val dayValidation = Validator.validateDayOfWeek(input.dayOfWeek)
             if (dayValidation is ValidationResult.Error) {
                 throw IllegalArgumentException(dayValidation.message)
@@ -59,7 +58,6 @@ class ScheduleService(
     suspend fun getScheduleById(scheduleId: String, userId: String): LearningSchedule? {
         val schedule = scheduleRepository.getScheduleById(scheduleId)
         
-        // Verify ownership
         if (schedule != null && schedule.userId != userId) {
             throw IllegalAccessException("You don't have permission to access this schedule")
         }
@@ -115,7 +113,6 @@ class ScheduleService(
     }
     
     suspend fun deleteSchedule(scheduleId: String, userId: String): Boolean {
-        // Verify ownership
         getScheduleById(scheduleId, userId)
             ?: throw NoSuchElementException("Schedule not found")
         
