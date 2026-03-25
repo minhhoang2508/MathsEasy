@@ -97,7 +97,6 @@ class BadgeService(
                 Pair(current, badge.condition.threshold)
             }
             "accuracy" -> {
-                // Topic-specific accuracy
                 val topic = badge.condition.topic
                 if (topic != null) {
                     val topicHistory = getTopicHistory(history, topic, exerciseMap)
@@ -180,7 +179,7 @@ class BadgeService(
     ): Boolean {
         return when (badge.condition.type) {
             "exercises" -> {
-            // Total lessons completed (grouped by session)
+            // Total lessons completed 
             val historyWithExercises = history.mapNotNull { h ->
                 exerciseMap[h.exerciseId]?.let { ex -> h to ex }
             }
@@ -200,7 +199,7 @@ class BadgeService(
                 user.totalPoints >= badge.condition.threshold
             }
             "accuracy" -> {
-                // Topic-specific accuracy (need at least 10 exercises)
+                // Topic-specific accuracy 
                 val topic = badge.condition.topic ?: return false
                 val topicHistory = getTopicHistory(history, topic, exerciseMap)
                 
@@ -257,7 +256,7 @@ class BadgeService(
     }
     
     /**
-     * Create a new badge (admin only)
+     * Create a new badge 
      */
     suspend fun createBadge(badge: Badge): Badge? {
         return badgeRepository.createBadge(badge)
