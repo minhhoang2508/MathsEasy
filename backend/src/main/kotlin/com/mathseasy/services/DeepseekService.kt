@@ -28,9 +28,8 @@ class DeepseekService {
     private val apiKey = dotenv["DEEPSEEK_API_KEY"] ?: ""
     private val apiUrl = dotenv["DEEPSEEK_API_URL"] ?: "https://api.deepseek.com/v1"
     
-    // Simple in-memory cache to reduce API calls
     private val cache = ConcurrentHashMap<String, CachedResponse>()
-    private val cacheExpiryMs = 3600000L // 1 hour
+    private val cacheExpiryMs = 3600000L 
     
     private val httpClient = HttpClient(CIO) {
         install(ContentNegotiation) {
@@ -42,8 +41,8 @@ class DeepseekService {
             })
         }
         install(HttpTimeout) {
-            requestTimeoutMillis = 60000 // 60 seconds
-            connectTimeoutMillis = 10000 // 10 seconds
+            requestTimeoutMillis = 60000 
+            connectTimeoutMillis = 10000 
         }
     }
     
@@ -66,7 +65,6 @@ class DeepseekService {
         return try {
             val exercises = mutableListOf<Exercise>()
             
-            // Generate 'count' number of exercises by calling AI multiple times
             repeat(count) { index ->
                 logger.info { "Generating exercise ${index + 1} of $count" }
                 val prompt = buildSimilarExercisePrompt(exercise, difficulty ?: exercise.difficulty, index + 1)
@@ -147,9 +145,6 @@ class DeepseekService {
         }
     }
     
-    /**
-     * Get feedback on user's incorrect answer
-     */
     suspend fun getFeedback(
         exercise: Exercise,
         userAnswer: String,
@@ -187,9 +182,7 @@ class DeepseekService {
             Result.failure(e)
         }
     }
-    
-    // ==================== PRIVATE HELPER METHODS ====================
-    
+        
     /**
      * Call Deepseek API with a prompt
      */
@@ -200,14 +193,8 @@ class DeepseekService {
         
         logger.info { "Calling Deepseek API..." }
         
-        // Model name for OpenRouter
-        // Free models available:
-        // - "deepseek/deepseek-chat" (recommended - good quality)
-        // - "meta-llama/llama-3.1-8b-instruct:free"
-        // - "mistralai/mistral-7b-instruct:free"
-        // - "google/gemini-2.0-flash-exp:free"
         val modelName = if (apiUrl.contains("openrouter")) {
-            "deepseek/deepseek-chat"  // Using Deepseek via OpenRouter
+            "deepseek/deepseek-chat"  
         } else {
             "deepseek-chat"
         }
@@ -225,7 +212,6 @@ class DeepseekService {
         val response: DeepseekResponse = httpClient.post("$apiUrl/chat/completions") {
             contentType(ContentType.Application.Json)
             header("Authorization", "Bearer $apiKey")
-            // OpenRouter specific headers (optional but recommended)
             header("HTTP-Referer", "https://mathseasy.app")
             header("X-Title", "MathsEasy")
             setBody(request)
@@ -462,9 +448,6 @@ Do not include any text before or after the JSON object.
 
         var jsonString = response.substring(jsonStart, jsonEnd)
 
-        // Sanitize invalid JSON escape sequences from AI output
-        // Valid JSON escapes: \" \\ \/ \b \f \n \r \t \uXXXX
-        // AI often produces invalid ones like \( \) \= \' \+ etc.
         jsonString = jsonString.replace(Regex("""\\(?!["\\/bfnrtu])"""), "\\\\")
 
         return json.decodeFromString<WrongAnswerAnalysisResponse>(jsonString)
@@ -490,7 +473,6 @@ Do not include any text before or after the JSON object.
             val jsonString = response.substring(jsonStart, jsonEnd)
             val parsedExercise = json.decodeFromString<GeneratedExercise>(jsonString)
             
-            // Convert to Exercise model
             val exercise = Exercise(
                 id = null,
                 title = parsedExercise.title,
@@ -532,9 +514,7 @@ Do not include any text before or after the JSON object.
         return response.trim()
     }
 
-    
-    // ==================== CACHE METHODS ====================
-    
+        
     private fun getFromCache(key: String): Any? {
         val cached = cache[key]
         if (cached != null && System.currentTimeMillis() - cached.timestamp < cacheExpiryMs) {
@@ -552,9 +532,7 @@ Do not include any text before or after the JSON object.
         cache.clear()
         logger.info { "AI cache cleared" }
     }
-    
-    // ==================== DATA CLASSES ====================
-    
+        
     @Serializable
     private data class DeepseekRequest(
         val model: String,
