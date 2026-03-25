@@ -70,7 +70,6 @@ class ExerciseSetService(
             val pointsEarned = if (isCorrect) basePoints else 0
             totalPointsEarned += pointsEarned
 
-            // Add idx to timestamp to ensure stable sorting order for badges
             val history = LearningHistory(
                 userId = userId,
                 exerciseId = exercise.id ?: "",
