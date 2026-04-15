@@ -38,6 +38,14 @@ fun isYesterday(timestamp: Long): Boolean {
     return checkDate == yesterday
 }
 
+fun daysAgo(days: Int): LocalDate {
+    return getCurrentDate().minus(days, DateTimeUnit.DAY)
+}
+
+fun getYesterdayTimestamp(): Long {
+    return Clock.System.now().minus(1, DateTimeUnit.DAY, TimeZone.UTC).toEpochMilliseconds()
+}
+
 // String Extensions
 fun String.isValidEmail(): Boolean {
     val emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$".toRegex()
