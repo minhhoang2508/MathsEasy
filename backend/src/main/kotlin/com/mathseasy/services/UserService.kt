@@ -2,6 +2,7 @@ package com.mathseasy.services
 
 import com.mathseasy.models.User
 import com.mathseasy.models.UserPreferences
+import com.mathseasy.models.AvatarConfig
 import com.mathseasy.models.UserStats
 import com.mathseasy.models.TopicProgress
 import com.mathseasy.repositories.BadgeRepository
@@ -33,13 +34,26 @@ class UserService(
         uid: String,
         displayName: String? = null,
         photoUrl: String? = null,
-        preferences: UserPreferences? = null
+        preferences: UserPreferences? = null,
+        avatarConfig: AvatarConfig? = null
     ): User? {
         val updates = mutableMapOf<String, Any>()
         
         displayName?.let { updates["displayName"] = it }
         photoUrl?.let { updates["photoUrl"] = it }
-        preferences?.let { updates["preferences"] = it }
+        preferences?.let { incoming ->
+            val existing = userRepository.getUserById(uid)?.preferences ?: UserPreferences()
+            val merged = existing.copy(
+                language = incoming.language,
+                notificationsEnabled = incoming.notificationsEnabled,
+                emailNotificationsEnabled = incoming.emailNotificationsEnabled,
+                soundEnabled = incoming.soundEnabled,
+                notificationMinutesBefore = incoming.notificationMinutesBefore,
+                timezone = incoming.timezone ?: existing.timezone
+            )
+            updates["preferences"] = merged
+        }
+        avatarConfig?.let { updates["avatarConfig"] = it }
         
         if (updates.isEmpty()) {
             return getUserById(uid)
