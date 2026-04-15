@@ -14,7 +14,7 @@ class PaymentService {
     private val userRepository = UserRepository()
 
     /**
-     * Generate a random order ID in format: MATHXXXXXX
+     * Generate a random order ID in format: MATH-XXXXXX
      */
     private fun generateOrderId(): String {
         val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -60,20 +60,22 @@ class PaymentService {
 
     /**
      * Process SePay webhook payload
+     * Returns true if payment was successfully processed
      */
     suspend fun processWebhook(payload: SepayWebhookPayload): Boolean {
-        logger.info { "Processing webhook - transactionId: ${payload.id}, content: ${payload.content}, amount: ${payload.transferAmount}" }
-
-        logger.info { "Full webhook payload: gateway=${payload.gateway}, accountNumber=${payload.accountNumber}, transferType=${payload.transferType}, referenceCode=${payload.referenceCode}" }
+        logger.info { "Processing webhook - transactionId: ${payload.id}, amount: ${payload.transferAmount}" }
 
         val transactionId = payload.id.toString()
 
+        // 1. Idempotency check: skip if transaction already processed
         val existingOrder = orderRepository.getOrderByTransactionId(transactionId)
         if (existingOrder != null) {
             logger.info { "Transaction $transactionId already processed for order ${existingOrder.id}, skipping" }
             return true
         }
 
+        // 2. Extract order ID from content (transfer description)
+        // SePay content may contain extra text, we need to find the MATHXXXXXX pattern
         val orderIdPattern = Regex("MATH[A-Z0-9]{6}")
         val orderIdMatch = orderIdPattern.find(payload.content.uppercase())
 
@@ -84,22 +86,26 @@ class PaymentService {
 
         val orderId = orderIdMatch.value
 
+        // 3. Find the order
         val order = orderRepository.getOrderById(orderId)
         if (order == null) {
             logger.warn { "Order not found: $orderId" }
             return false
         }
 
+        // 4. Check order is still pending
         if (order.status != Constants.ORDER_STATUS_PENDING) {
             logger.info { "Order $orderId is not pending (status: ${order.status}), skipping" }
             return true
         }
 
+        // 5. Validate amount
         if (payload.transferAmount < order.amount) {
             logger.warn { "Amount mismatch for order $orderId: expected ${order.amount}, received ${payload.transferAmount}" }
             return false
         }
 
+        // 6. Update order status to paid
         orderRepository.updateOrderStatus(
             id = orderId,
             status = Constants.ORDER_STATUS_PAID,
@@ -107,12 +113,15 @@ class PaymentService {
             paidAt = getCurrentTimestamp()
         )
 
+        // 7. Unlock all premium features for user (global premium package)
         try {
             val allPremiumTopics = listOf("exponents_logarithms", "sequences")
             unlockPremiumTopics(order.uid, allPremiumTopics)
             logger.info { "Premium topics '$allPremiumTopics' unlocked for user ${order.uid}" }
         } catch (e: Exception) {
             logger.error(e) { "Failed to unlock premium topics for user ${order.uid}: ${e.message}" }
+            // Payment is still considered successful even if unlock fails
+            // Admin can manually fix this
         }
 
         logger.info { "Payment confirmed for order $orderId, transactionId: $transactionId" }
@@ -139,10 +148,11 @@ class PaymentService {
     }
 
     /**
-     * Get order status
+     * Get order status (with ownership check)
      */
-    suspend fun getOrderStatus(orderId: String): OrderStatusResponse? {
+    suspend fun getOrderStatus(orderId: String, requestingUserId: String): OrderStatusResponse? {
         val order = orderRepository.getOrderById(orderId) ?: return null
+        if (order.uid != requestingUserId) return null
 
         return OrderStatusResponse(
             orderId = order.id,
