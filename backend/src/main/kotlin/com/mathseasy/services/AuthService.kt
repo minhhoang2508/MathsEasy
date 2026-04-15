@@ -9,6 +9,7 @@ import com.mathseasy.utils.getCurrentTimestamp
 import com.mathseasy.utils.getCurrentDate
 import com.mathseasy.utils.isYesterday
 import com.mathseasy.utils.toLocalDateTime
+import com.mathseasy.utils.daysAgo
 import mu.KotlinLogging
 
 private val logger = KotlinLogging.logger {}
@@ -33,39 +34,62 @@ class AuthService(
     /**
      * Register new user or login existing user
      */
-    suspend fun registerOrLogin(idToken: String, displayName: String? = null): Pair<User, Boolean> {
+    suspend fun registerOrLogin(idToken: String, displayName: String? = null, timezone: String? = null): Pair<User, Boolean> {
         val decodedToken = verifyIdToken(idToken) 
             ?: throw IllegalArgumentException("Invalid ID token")
         
         val uid = decodedToken.uid
         val email = decodedToken.email ?: throw IllegalArgumentException("Email not found in token")
+        val requestedName = displayName?.trim().takeUnless { it.isNullOrBlank() }
+        val tokenName = decodedToken.name?.trim().takeUnless { it.isNullOrBlank() }
+        val resolvedName = requestedName ?: tokenName
+        val resolvedTimezone = timezone?.trim().takeUnless { it.isNullOrBlank() }
         
-        // Check if user already exists
         val existingUser = userRepository.getUserById(uid)
         
         return if (existingUser != null) {
-            // Existing user - update last login
             var updatedUser = userRepository.updateLastLogin(uid) ?: existingUser
 
-            // Validate streak: reset to 0 if lastStreakDate is not today or yesterday
-            // Only update currentStreak, preserve lastStreakDate so submitSet can detect "else" branch correctly
             val lastStreakDate = updatedUser.lastStreakDate
             if (lastStreakDate != null && updatedUser.currentStreak > 0) {
                 val today = getCurrentDate()
                 val streakDate = lastStreakDate.toLocalDateTime().date
                 if (streakDate != today && !isYesterday(lastStreakDate)) {
-                    userRepository.updateUser(uid, mapOf("currentStreak" to 0))
-                    updatedUser = updatedUser.copy(currentStreak = 0)
+                    val twoDaysAgo = daysAgo(2)
+                    val missedOneDay = streakDate == twoDaysAgo
+                    userRepository.updateUser(uid, mapOf(
+                        "currentStreak" to 0,
+                        "previousStreak" to updatedUser.currentStreak,
+                        "streakBroken" to missedOneDay
+                    ))
+                    updatedUser = updatedUser.copy(
+                        currentStreak = 0,
+                        previousStreak = updatedUser.currentStreak,
+                        streakBroken = missedOneDay
+                    )
                 }
+            }
+
+            if (!resolvedName.isNullOrBlank() && resolvedName != updatedUser.displayName) {
+                userRepository.updateUser(uid, mapOf("displayName" to resolvedName))
+                updatedUser = updatedUser.copy(displayName = resolvedName)
+            }
+
+            if (resolvedTimezone != null && resolvedTimezone != updatedUser.preferences.timezone) {
+                val updatedPrefs = updatedUser.preferences.copy(timezone = resolvedTimezone)
+                userRepository.updatePreferences(uid, updatedPrefs)
+                updatedUser = updatedUser.copy(preferences = updatedPrefs)
             }
 
             Pair(updatedUser, false)
         } else {
-            // New user - create profile
+            val newPreferences = UserPreferences(
+                timezone = resolvedTimezone
+            )
             val newUser = User(
                 uid = uid,
                 email = email,
-                displayName = displayName ?: decodedToken.name,
+                displayName = resolvedName,
                 photoUrl = decodedToken.picture,
                 createdAt = getCurrentTimestamp(),
                 lastLoginAt = getCurrentTimestamp(),
@@ -75,7 +99,7 @@ class AuthService(
                 lastStreakDate = null,
                 badgeIds = emptyList(),
                 fcmToken = null,
-                preferences = UserPreferences()
+                preferences = newPreferences
             )
             
             val createdUser = userRepository.createUser(newUser)
@@ -100,5 +124,4 @@ class AuthService(
         return decodedToken?.uid
     }
 }
-
 
