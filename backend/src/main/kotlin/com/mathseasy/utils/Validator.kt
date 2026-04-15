@@ -1,9 +1,77 @@
 package com.mathseasy.utils
 
+import com.mathseasy.models.AvatarConfig
+
 /**
  * Input validation utilities
  */
 object Validator {
+
+    private val ALLOWED_TOP = setOf(
+        "noHair", "hat", "hijab", "turban", "winterHat1", "winterHat02", "winterHat03", "winterHat04",
+        "bob", "bun", "curly", "curvy", "dreads", "frida", "fro", "froBand", "longButNotTooLong",
+        "miaWallace", "shavedSides", "straight02", "straight01", "straightAndStrand", "dreads01",
+        "dreads02", "frizzle", "shaggy", "shaggyMullet", "shortCurly", "shortFlat", "shortRound",
+        "shortWaved", "sides", "theCaesar", "theCaesarAndSidePart", "bigHair"
+    )
+    private val ALLOWED_HAIR_COLOR = setOf(
+        "a55728", "2c1b18", "b58143", "d6b370", "724133", "4a312c", "f59797", "ecdcbf", "c93305", "e8e1e1"
+    )
+    private val ALLOWED_HAT_COLOR = setOf(
+        "262e33", "65c9ff", "5199e4", "25557c", "e6e6e6", "929598", "3c4f5c", "b1e2ff", "a7ffc4", "ffdeb5",
+        "ffafb9", "ffffb1", "ff488e", "ff5c5c", "ffffff"
+    )
+    private val ALLOWED_SKIN_COLOR = setOf(
+        "614335", "d08b5b", "ae5d29", "edb98a", "ffdbb4", "fd9841", "f8d25c"
+    )
+    private val ALLOWED_EYES = setOf(
+        "closed", "cry", "default", "eyeRoll", "happy", "hearts", "side", "squint", "surprised",
+        "winkWacky", "wink", "xDizzy"
+    )
+    private val ALLOWED_EYEBROWS = setOf(
+        "angryNatural", "defaultNatural", "flatNatural", "frownNatural", "raisedExcitedNatural",
+        "sadConcernedNatural", "unibrowNatural", "upDownNatural", "angry", "default", "raisedExcited",
+        "sadConcerned", "upDown"
+    )
+    private val ALLOWED_MOUTH = setOf(
+        "concerned", "default", "disbelief", "eating", "grimace", "sad", "screamOpen", "serious",
+        "smile", "tongue", "twinkle", "vomit"
+    )
+    private val ALLOWED_FACIAL_HAIR = setOf(
+        "blank", "beardLight", "beardMajestic", "beardMedium", "moustacheFancy", "moustacheMagnum"
+    )
+    private val ALLOWED_ACCESSORIES = setOf(
+        "blank", "kurt", "prescription01", "prescription02", "round", "sunglasses", "wayfarers", "eyepatch"
+    )
+    private val ALLOWED_CLOTHING = setOf(
+        "blazerAndShirt", "blazerAndSweater", "collarAndSweater", "graphicShirt", "hoodie", "overall",
+        "shirtCrewNeck", "shirtScoopNeck", "shirtVNeck"
+    )
+    private val ALLOWED_CLOTHING_GRAPHIC = setOf(
+        "bat", "bear", "cumbia", "deer", "diamond", "hola", "pizza", "resist", "skull", "skullOutline"
+    )
+    private val ALLOWED_GENERAL_COLOR = ALLOWED_HAT_COLOR
+
+    fun validateAvatarConfig(config: AvatarConfig): ValidationResult {
+        if (config.seed.length > 100 || config.seed.contains("<") || config.seed.contains(">")) {
+            return ValidationResult.Error("Invalid avatar seed")
+        }
+        if (config.top !in ALLOWED_TOP) return ValidationResult.Error("Invalid avatar top: ${config.top}")
+        if (config.hairColor !in ALLOWED_HAIR_COLOR) return ValidationResult.Error("Invalid hair color")
+        if (config.hatColor !in ALLOWED_HAT_COLOR) return ValidationResult.Error("Invalid hat color")
+        if (config.skinColor !in ALLOWED_SKIN_COLOR) return ValidationResult.Error("Invalid skin color")
+        if (config.eyes !in ALLOWED_EYES) return ValidationResult.Error("Invalid eyes")
+        if (config.eyebrows !in ALLOWED_EYEBROWS) return ValidationResult.Error("Invalid eyebrows")
+        if (config.mouth !in ALLOWED_MOUTH) return ValidationResult.Error("Invalid mouth")
+        if (config.facialHair !in ALLOWED_FACIAL_HAIR) return ValidationResult.Error("Invalid facial hair")
+        if (config.facialHairColor !in ALLOWED_HAIR_COLOR) return ValidationResult.Error("Invalid facial hair color")
+        if (config.accessories !in ALLOWED_ACCESSORIES) return ValidationResult.Error("Invalid accessories")
+        if (config.accessoriesColor !in ALLOWED_GENERAL_COLOR) return ValidationResult.Error("Invalid accessories color")
+        if (config.clothing !in ALLOWED_CLOTHING) return ValidationResult.Error("Invalid clothing")
+        if (config.clothesColor !in ALLOWED_GENERAL_COLOR) return ValidationResult.Error("Invalid clothes color")
+        if (config.clothingGraphic !in ALLOWED_CLOTHING_GRAPHIC) return ValidationResult.Error("Invalid clothing graphic")
+        return ValidationResult.Success
+    }
     
     fun validateEmail(email: String?): ValidationResult {
         if (email.isNullOrBlankOrEmpty()) {
