@@ -11,17 +11,20 @@ import java.util.Properties
 
 /**
  * Service for sending email notifications
+ * Supports SMTP configuration via environment variables
  */
 class EmailService {
     private val logger = LoggerFactory.getLogger(EmailService::class.java)
     private val dotenv = dotenv { ignoreIfMissing = true }
     
+    // SMTP Configuration from .env
     private val smtpHost = dotenv["SMTP_HOST"] ?: "smtp.gmail.com"
     private val smtpPort = dotenv["SMTP_PORT"]?.toIntOrNull() ?: 587
     private val smtpUser = dotenv["SMTP_USER"] ?: ""
     private val smtpPassword = dotenv["SMTP_PASSWORD"] ?: ""
     private val smtpFrom = dotenv["SMTP_FROM"] ?: smtpUser
     private val smtpFromName = dotenv["SMTP_FROM_NAME"] ?: "MathsEasy"
+    private val appBaseUrl = dotenv["APP_BASE_URL"] ?: "http://localhost:3000"
     
     private val isConfigured: Boolean = smtpUser.isNotBlank() && smtpPassword.isNotBlank()
     
@@ -119,11 +122,11 @@ class EmailService {
                         <p style="font-size: 18px; margin: 0;">Time to learn!</p>
                     </div>
                     <div class="content">
-                        <p>Hi <strong>$userName</strong>,</p>
-                        <p>Your learning session is starting in <strong>$minutesBefore minutes</strong> at <strong>$scheduledTime</strong>!</p>
+                        <p>Hi <strong>${escapeHtml(userName)}</strong>,</p>
+                        <p>Your learning session is starting in <strong>$minutesBefore minutes</strong> at <strong>${escapeHtml(scheduledTime)}</strong>!</p>
                         <p>📚 Ready to improve your math skills? Let's make today count!</p>
                         <p style="text-align: center;">
-                            <a href="http://localhost:3000/exercises" class="button">Start Learning</a>
+                            <a href="${appBaseUrl}/exercises" class="button">Start Learning</a>
                         </p>
                         <p style="margin-top: 30px; font-size: 14px; color: #6c757d;">
                             💡 <strong>Tip:</strong> Consistency is key to mastering mathematics. Even 15 minutes daily makes a difference!
@@ -143,9 +146,90 @@ class EmailService {
             
             Your learning session is starting in $minutesBefore minutes at $scheduledTime!
             
-            Ready to improve your math skills? Visit http://localhost:3000/exercises to start learning.
+            Ready to improve your math skills? Visit ${appBaseUrl}/exercises to start learning.
             
             Tip: Consistency is key to mastering mathematics. Even 15 minutes daily makes a difference!
+            
+            © 2025 MathsEasy
+        """.trimIndent()
+        
+        return sendEmail(toEmail, subject, htmlBody, textBody)
+    }
+    
+    /**
+     * Send streak reminder email
+     */
+    suspend fun sendStreakReminderEmail(
+        toEmail: String,
+        userName: String,
+        currentStreak: Int
+    ): Boolean {
+        val subject = if (currentStreak > 0) {
+            "🔥 Don't Break Your Streak!"
+        } else {
+            "📚 Start Your Learning Streak!"
+        }
+        
+        val safeUserName = escapeHtml(userName)
+        val messageHtml = if (currentStreak > 0) {
+            "You're on a <strong>${currentStreak}-day streak</strong>! Complete an exercise today to keep your streak alive!"
+        } else {
+            "Complete an exercise today to start building your learning streak!"
+        }
+        
+        val messageText = if (currentStreak > 0) {
+            "You're on a ${currentStreak}-day streak! Complete an exercise today to keep your streak alive!"
+        } else {
+            "Complete an exercise today to start building your learning streak!"
+        }
+        
+        val htmlBody = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; }
+                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                    .header { background: linear-gradient(135deg, #ff7eb3 0%, #ff758c 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center; }
+                    .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
+                    .button { display: inline-block; padding: 12px 30px; background: #ff758c; color: white; text-decoration: none; border-radius: 5px; margin-top: 20px; font-weight: bold; }
+                    .footer { text-align: center; color: #6c757d; font-size: 12px; margin-top: 20px; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>🔥 MathsEasy Streak</h1>
+                        <p style="font-size: 18px; margin: 0;">Time is running out!</p>
+                    </div>
+                    <div class="content">
+                        <p>Hi <strong>${safeUserName}</strong>,</p>
+                        <p>${messageHtml}</p>
+                        <p style="text-align: center;">
+                            <a href="${appBaseUrl}/exercises" class="button">Continue Learning</a>
+                        </p>
+                        <p style="margin-top: 30px; font-size: 14px; color: #6c757d;">
+                            💡 <strong>Tip:</strong> Just one quick 5-minute exercise is enough to keep your streak going!
+                        </p>
+                    </div>
+                    <div class="footer">
+                        <p>© 2025 MathsEasy. All rights reserved.</p>
+                        <p>You're receiving this because you have email notifications enabled.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+        """.trimIndent()
+        
+        val textBody = """
+            Hi $userName,
+            
+            $messageText
+            
+            Visit ${appBaseUrl}/exercises to continue learning.
+            
+            Tip: Just one quick 5-minute exercise is enough to keep your streak going!
             
             © 2025 MathsEasy
         """.trimIndent()
@@ -162,7 +246,7 @@ class EmailService {
         achievementTitle: String,
         achievementDescription: String
     ): Boolean {
-        val subject = "🏆 Congratulations! You've earned a new achievement!"
+        val subject = "Congratulations! You've earned a new achievement!"
         
         val htmlBody = """
             <!DOCTYPE html>
@@ -185,10 +269,10 @@ class EmailService {
                     </div>
                     <div class="achievement">
                         <div class="trophy">🏆</div>
-                        <p style="text-align: center; font-size: 20px; margin: 20px 0;"><strong>$achievementTitle</strong></p>
-                        <p style="text-align: center; color: #6c757d;">$achievementDescription</p>
+                        <p style="text-align: center; font-size: 20px; margin: 20px 0;"><strong>${escapeHtml(achievementTitle)}</strong></p>
+                        <p style="text-align: center; color: #6c757d;">${escapeHtml(achievementDescription)}</p>
                         <p style="text-align: center; margin-top: 30px;">
-                            Great job, <strong>$userName</strong>! Keep up the excellent work!
+                            Great job, <strong>${escapeHtml(userName)}</strong>! Keep up the excellent work!
                         </p>
                     </div>
                     <div class="footer">
@@ -200,6 +284,15 @@ class EmailService {
         """.trimIndent()
         
         return sendEmail(toEmail, subject, htmlBody)
+    }
+    
+    private fun escapeHtml(input: String): String {
+        return input
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\"", "&quot;")
+            .replace("'", "&#x27;")
     }
     
     /**
