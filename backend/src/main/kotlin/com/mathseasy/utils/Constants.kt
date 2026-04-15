@@ -1,5 +1,7 @@
 package com.mathseasy.utils
 
+import io.github.cdimascio.dotenv.dotenv
+
 object Constants {
     // Points Configuration
     const val POINTS_EASY = 5
@@ -106,10 +108,38 @@ object Constants {
     const val ORDER_STATUS_PAID = "paid"
     const val ORDER_STATUS_FAILED = "failed"
     
-    const val SEPAY_BANK = "MB"
-    const val SEPAY_ACCOUNT = "0378313750"
-    val SEPAY_API_KEY: String = System.getenv("SEPAY_API_KEY") ?: ""
+    private val dotenv = dotenv { ignoreIfMissing = true }
+    val SEPAY_BANK: String = System.getenv("SEPAY_BANK") ?: dotenv["SEPAY_BANK"] ?: "MB"
+    val SEPAY_ACCOUNT: String = System.getenv("SEPAY_ACCOUNT") ?: dotenv["SEPAY_ACCOUNT"] ?: ""
+    val SEPAY_API_KEY: String = System.getenv("SEPAY_API_KEY") ?: dotenv["SEPAY_API_KEY"] ?: ""
+    
+    // Admin Configuration
+    val ADMIN_UIDS: Set<String> = (System.getenv("ADMIN_UIDS") ?: dotenv["ADMIN_UIDS"] ?: "")
+        .split(",").map { it.trim() }.filter { it.isNotBlank() }.toSet()
+    
+    fun isAdmin(uid: String): Boolean = uid in ADMIN_UIDS
+    
+    // App Configuration
+    val APP_BASE_URL: String = System.getenv("APP_BASE_URL") ?: dotenv["APP_BASE_URL"] ?: "http://localhost:3000"
     
     const val PAYMENT_AMOUNT_FOUNDATIONS = 50000L
+    
+    // Shop Items
+    const val SHOP_ITEM_BATTERY = "battery"
+    const val SHOP_ITEM_REDEMPTION = "redemption"
+    const val SHOP_ITEM_RESURRECTION = "resurrection"
+    const val SHOP_ITEM_RISKY_RISKY = "risky_risky"
+    
+    const val SHOP_PRICE_BATTERY = 1500
+    const val SHOP_PRICE_REDEMPTION = 500
+    const val SHOP_PRICE_RESURRECTION = 1000
+    const val SHOP_PRICE_RISKY_RISKY = 750
+    
+    // Firestore Collections - Shop
+    const val COLLECTION_USER_INVENTORY = "userInventory"
+    const val COLLECTION_SHOP_TRANSACTIONS = "shopTransactions"
+    
+    // Risky Risky multipliers
+    val RISKY_MULTIPLIERS = listOf(0.5, 1.0 / 1.5, 1.5, 2.0)
+    val RISKY_LABELS = listOf("÷2", "÷1.5", "×1.5", "×2")
 }
-
