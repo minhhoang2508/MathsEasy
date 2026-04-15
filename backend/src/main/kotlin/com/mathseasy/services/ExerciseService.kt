@@ -22,7 +22,7 @@ class ExerciseService(
         limit: Int = 20,
         offset: Int = 0
     ): ExercisesResponse {
-        // Validate difficulty 
+        // Validate difficulty if provided
         if (difficulty != null) {
             val validation = Validator.validateDifficulty(difficulty)
             if (validation is ValidationResult.Error) {
@@ -153,8 +153,17 @@ class ExerciseService(
                 Pair(true, newStreak)
             }
             else -> {
-                // Streak broken, start new
-                userRepository.updateStreak(userId, 1, user.longestStreak)
+                val lastDate = user.lastStreakDate!!.toLocalDateTime().date
+                val twoDaysAgoDate = daysAgo(2)
+                val missedOneDay = lastDate == twoDaysAgoDate
+                val updates = mutableMapOf<String, Any>(
+                    "currentStreak" to 1,
+                    "longestStreak" to user.longestStreak,
+                    "lastStreakDate" to getCurrentTimestamp(),
+                    "previousStreak" to if (missedOneDay) user.currentStreak else 0,
+                    "streakBroken" to missedOneDay
+                )
+                userRepository.updateUser(userId, updates)
                 Pair(true, 1)
             }
         }
