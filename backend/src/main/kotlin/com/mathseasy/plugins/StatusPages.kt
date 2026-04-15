@@ -22,6 +22,12 @@ fun Application.configureStatusPages() {
                         errorResponse<Map<String,String>>(Constants.ERROR_UNAUTHORIZED, "Unauthorized access")
                     )
                 }
+                is ForbiddenException -> {
+                    call.respond(
+                        HttpStatusCode.Forbidden,
+                        errorResponse<Map<String,String>>(Constants.ERROR_UNAUTHORIZED, "Admin access required")
+                    )
+                }
                 is IllegalArgumentException -> {
                     call.respond(
                         HttpStatusCode.BadRequest,
