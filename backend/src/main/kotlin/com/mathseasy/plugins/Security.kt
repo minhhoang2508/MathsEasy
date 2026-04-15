@@ -69,5 +69,13 @@ suspend fun ApplicationCall.requireUserId(): String {
 }
 
 class UnauthorizedException : Exception("Unauthorized")
+class ForbiddenException : Exception("Forbidden: admin access required")
 
-
+suspend fun ApplicationCall.requireAdmin(): String {
+    val userId = requireUserId()
+    if (!com.mathseasy.utils.Constants.isAdmin(userId)) {
+        respond(HttpStatusCode.Forbidden, mapOf("error" to "Admin access required"))
+        throw ForbiddenException()
+    }
+    return userId
+}
