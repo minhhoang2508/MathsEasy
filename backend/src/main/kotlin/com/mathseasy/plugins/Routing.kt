@@ -32,9 +32,11 @@ fun Application.configureRouting() {
             historyRoutes()
             badgeRoutes()
             aiRoutes()
+            socrateRoutes()
             notificationRoutes()
             paymentRoutes()
             studyPlanRoutes()
+            shopRoutes()
         }
     }
 }
